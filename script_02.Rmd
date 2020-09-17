@@ -4,7 +4,7 @@ author: "David Kane"
 output: html_document
 ---
 
-Go to https://registrar.fas.harvard.edu/faculty-staff/courses/enrollment and scroll down to "Access the Current Course Enrollment Numbers." Click on that to download the Excel file. Create a folder in your project called `raw_data`. Move the Excel file into that folder. 
+Go to https://registrar.fas.harvard.edu/faculty-staff/courses/enrollment and scroll down to "Access the Current Course Enrollment Numbers." Click on that to download the Excel file. Create a folder in your project called `raw_data`. Move the Excel file into that folder. Be cool and do these things from the command line!
 
 Load **tidyverse**, **readxl** and **janitor** into your setup chunk. You may need to install the packages **readxl** and **janitor** if you haven't already.
 
@@ -12,23 +12,57 @@ Load **tidyverse**, **readxl** and **janitor** into your setup chunk. You may ne
 library(tidyverse)
 library(readxl)
 library(janitor)
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo= TRUE)
 ```
 
 ### Scene 1
 
-**Prompt:** Use **readxl** to read in the data and store it in an object called `raw_data`. Clean the data by cleaning any column names, skipping or cutting rows, and storing the cleaned data in an object called `en_fall_2020`. Additionally, since we will be looking only at undergraduate enrollment, get rid of any irrelevant columns, and filter to keep only courses with at least ten undergraduate students. This will get rid of any weird research courses. Look closely at your data! There is a lot of garbage to find and deal with.
+**Prompt:** Use **readxl** to read in the data and store it in an object called `raw`. Clean the data by cleaning any column names, skipping or cutting rows, and storing the cleaned data in an object called `en_fall_2020`. Additionally, since we will be looking only at undergraduate enrollment, get rid of any irrelevant columns, and filter to keep only courses with at least ten undergraduate students. This will get rid of any weird research courses. Look closely at your data! There is a lot of garbage to find and deal with.
 
 Once you have finished cleaning your data, figure out the course with the highest enrollment. And figure out how many students are enrolled in Gov 50. If you get a number much lower than 151, you have done something wrong . . .
 
+```{r}
+raw <- read_xlsx('raw_data/enrollment.xlsx', skip = 3)
+```
 
+```{r}
+en_fall_2020 <- raw %>%
+  clean_names() %>%
+  select(course_id, course_title, course_name, instructor_full_name, u_grad) %>%
+  filter(course_title == "GOV 50") %>%
+  group_by(course_title) %>%
+  summarize(summation = sum(u_grad, na.rm = T))
+
+glimpse(en_fall_2020)
+```
 
 ### Scene 2
 
 **Prompt:** Create a bar plot of the 10 biggest courses. Order the plot so that courses appear in descending order. You will want to use coord_flip() to make your plot easy to read.
 
+```{r}
+biggest_10_courses <- raw %>%
+  clean_names() %>%
+  select(course_id, course_title, course_name, instructor_full_name, u_grad) %>%
+  group_by(course_title) %>%
+  summarize(count = sum(u_grad, na.rm = T)) %>%
+  drop_na() %>%
+  arrange(desc(count)) %>%
+  slice(1:10)
 
-
+biggest_10_courses
+```
+```{r}
+biggest_10_courses %>%
+  ggplot(mapping = aes(x = fct_reorder(as.factor(course_title), count), 
+                       y = count,
+                       fill = count)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Class", y = "Enrollment", title = "Top 10 Classes at Harvard by Enrollment") +
+  theme_classic() +
+  scale_fill_continuous(palette = "Set1")
+```
 
 ### Scene 3
 
