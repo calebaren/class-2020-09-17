@@ -29,7 +29,7 @@ raw <- read_xlsx('raw_data/enrollment.xlsx', skip = 3)
 en_fall_2020 <- raw %>%
   clean_names() %>%
   select(course_id, course_title, course_name, instructor_full_name, u_grad) %>%
-  filter(course_title == "GOV 50") %>%
+  filter(course_title == "GOV 50", u_grad >= 10) %>%
   group_by(course_title) %>%
   summarize(summation = sum(u_grad, na.rm = T))
 
@@ -45,6 +45,7 @@ glimpse(en_fall_2020)
 biggest_10_courses <- raw %>%
   clean_names() %>%
   select(course_id, course_title, course_name, instructor_full_name, u_grad) %>%
+  filter(u_grad >= 10) %>%
   group_by(course_title) %>%
   summarize(count = sum(u_grad, na.rm = T)) %>%
   drop_na() %>%
@@ -53,6 +54,7 @@ biggest_10_courses <- raw %>%
 
 biggest_10_courses
 ```
+
 ```{r}
 biggest_10_courses %>%
   ggplot(mapping = aes(x = fct_reorder(as.factor(course_title), count), 
@@ -61,18 +63,59 @@ biggest_10_courses %>%
   geom_col() +
   coord_flip() +
   labs(x = "Class", y = "Enrollment", title = "Top 10 Classes at Harvard by Enrollment") +
-  theme_classic() +
-  scale_fill_continuous(palette = "Set1")
+  theme_classic()
 ```
 
 ### Scene 3
 
 **Prompt:** Make a bar plot of total enrollment by department for the ten smallest departments. Arrange the bar plot in ascending order.
 
+```{r}
+smallest_10_depts <- raw %>%
+  clean_names() %>%
+  select(course_id, course_title, course_name, course_department, u_grad) %>%
+  filter(u_grad >= 10) %>%
+  group_by(course_department) %>%
+  summarize(count = sum(u_grad, na.rm = T)) %>%
+  drop_na() %>%
+  arrange(count) %>%
+  slice(1:10) 
+  
+smallest_10_depts
 
+smallest_10_depts %>%
+  ggplot(mapping = aes(x = fct_reorder(as.factor(course_department), desc(count)), 
+                       y = count,
+                       fill = count)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Department", y = "Enrollment", title = "Smallest 10 Departments at Harvard by Enrollment") +
+  theme_classic()
+```
 
 ### Scene 4
 
 **Prompt:** Create a scatterplot of the length of course name versus enrollment for the Computer Science and Economics Department. Use `nchar()` to find the length, and include spaces. Add a linear line of best fit on your plot and scale axes appropriately.
 
+```{r}
+ec_cs <- raw %>%
+  clean_names() %>%
+  select(course_title, course_name, course_department, u_grad) %>%
+  filter(str_detect(course_title, "COMPSCI") | str_detect(course_title, "ECON")) %>%
+  filter(u_grad >= 10) %>%
+  mutate(course_name = str_trim(course_name, side = "both")) %>%
+  group_by(course_name) %>%
+  summarize(title_length = max(nchar(course_name)), enroll = sum(u_grad), dpt = course_department)
 
+ec_cs %>%
+  ggplot(mapping = aes(x = title_length, y = enroll, color = dpt)) +
+  geom_jitter(width = 0.2) +
+  geom_smooth(se = F, method = "lm") +
+  labs(x = "Length of Course Title",
+       y = "Log of Undergraduate Enrollment",
+       title = "Enrollment in Economics and CS by Title Length",
+       subtitle = "Not a whole lot of correlation?") +
+  scale_y_log10() +
+  scale_color_discrete(name = "Department") +
+  theme_minimal()
+```
