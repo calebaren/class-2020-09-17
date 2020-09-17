@@ -36,6 +36,7 @@ en_fall_2020 <- raw %>%
 glimpse(en_fall_2020)
 ```
 
+
 ### Scene 2
 
 **Prompt:** Create a bar plot of the 10 biggest courses. Order the plot so that courses appear in descending order. You will want to use coord_flip() to make your plot easy to read.
